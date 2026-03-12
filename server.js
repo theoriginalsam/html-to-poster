@@ -42,7 +42,10 @@ app.post('/convert', upload.single('htmlfile'), async (req, res) => {
   const outPath  = path.join(os.tmpdir(), `poster_${Date.now()}.pdf`);
 
   try {
-    const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
+    const browser = await puppeteer.launch({
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--allow-file-access-from-files']
+    });
     const page = await browser.newPage();
 
     // Large viewport so content isn't clipped
