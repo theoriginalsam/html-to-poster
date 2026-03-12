@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HTML → Poster PDF</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0f172a;
+    color: #e2e8f0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  .card {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 16px;
+    padding: 40px;
+    width: 100%;
+    max-width: 560px;
+    box-shadow: 0 25px 60px rgba(0,0,0,.5);
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+  .logo-icon {
+    width: 44px; height: 44px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+  }
+  .logo-text h1 { font-size: 20px; font-weight: 700; color: #f1f5f9; }
+  .logo-text p  { font-size: 12px; color: #64748b; margin-top: 2px; }
+
+  label { display: block; font-size: 12px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 6px; }
+
+  .field { margin-bottom: 20px; }
+
+  .drop-zone {
+    border: 2px dashed #334155;
+    border-radius: 10px;
+    padding: 32px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .2s, background .2s;
+    position: relative;
+  }
+  .drop-zone:hover, .drop-zone.drag-over { border-color: #6366f1; background: rgba(99,102,241,.06); }
+  .drop-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .drop-icon { font-size: 32px; margin-bottom: 8px; }
+  .drop-text { font-size: 14px; color: #94a3b8; }
+  .drop-text span { color: #6366f1; font-weight: 600; }
+  .file-name { font-size: 13px; color: #6366f1; margin-top: 6px; font-weight: 600; display: none; }
+
+  .size-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+  input[type=number], select {
+    width: 100%;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    color: #f1f5f9;
+    font-size: 14px;
+    padding: 10px 12px;
+    outline: none;
+    transition: border-color .2s;
+  }
+  input[type=number]:focus, select:focus { border-color: #6366f1; }
+
+  .presets { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+  .preset-btn {
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    color: #94a3b8;
+    font-size: 11px;
+    padding: 5px 10px;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .preset-btn:hover { border-color: #6366f1; color: #6366f1; }
+
+  .convert-btn {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    border: none;
+    border-radius: 10px;
+    color: white;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity .2s, transform .1s;
+    margin-top: 8px;
+  }
+  .convert-btn:hover { opacity: .9; }
+  .convert-btn:active { transform: scale(.98); }
+  .convert-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+  .status {
+    margin-top: 16px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    display: none;
+    align-items: center;
+    gap: 10px;
+  }
+  .status.loading { display: flex; background: rgba(99,102,241,.12); border: 1px solid rgba(99,102,241,.3); color: #a5b4fc; }
+  .status.success { display: flex; background: rgba(21,128,61,.12); border: 1px solid rgba(21,128,61,.3); color: #86efac; }
+  .status.error   { display: flex; background: rgba(185,28,28,.12); border: 1px solid rgba(185,28,28,.3); color: #fca5a5; }
+
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid rgba(165,180,252,.3);
+    border-top-color: #a5b4fc;
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .divider { border: none; border-top: 1px solid #1e293b; margin: 20px 0; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <div class="logo-icon">🖼</div>
+    <div class="logo-text">
+      <h1>HTML → Poster PDF</h1>
+      <p>Convert any HTML file to a print-ready poster</p>
+    </div>
+  </div>
+
+  <form id="form" enctype="multipart/form-data">
+
+    <!-- File Upload -->
+    <div class="field">
+      <label>HTML File</label>
+      <div class="drop-zone" id="dropZone">
+        <input type="file" name="htmlfile" id="fileInput" accept=".html,.htm" required>
+        <div class="drop-icon">📄</div>
+        <div class="drop-text">Drop your <span>.html</span> file here or click to browse</div>
+        <div class="file-name" id="fileName"></div>
+      </div>
+    </div>
+
+    <!-- Presets -->
+    <div class="field">
+      <label>Common Poster Sizes</label>
+      <div class="presets">
+        <button type="button" class="preset-btn" data-w="48" data-h="36" data-u="in">48×36 in (Landscape)</button>
+        <button type="button" class="preset-btn" data-w="36" data-h="48" data-u="in">36×48 in (Portrait)</button>
+        <button type="button" class="preset-btn" data-w="24" data-h="36" data-u="in">24×36 in</button>
+        <button type="button" class="preset-btn" data-w="18" data-h="24" data-u="in">18×24 in</button>
+        <button type="button" class="preset-btn" data-w="841" data-h="1189" data-u="mm">A0 (841×1189 mm)</button>
+        <button type="button" class="preset-btn" data-w="594" data-h="841" data-u="mm">A1 (594×841 mm)</button>
+      </div>
+    </div>
+
+    <!-- Size Inputs -->
+    <div class="field">
+      <label>Custom Size</label>
+      <div class="size-row">
+        <div>
+          <label style="font-size:11px;">Width</label>
+          <input type="number" name="width" id="width" value="48" min="1" step="any" required>
+        </div>
+        <div>
+          <label style="font-size:11px;">Height</label>
+          <input type="number" name="height" id="height" value="36" min="1" step="any" required>
+        </div>
+        <div>
+          <label style="font-size:11px;">Unit</label>
+          <select name="unit" id="unit">
+            <option value="in" selected>Inches (in)</option>
+            <option value="cm">Centimeters (cm)</option>
+            <option value="mm">Millimeters (mm)</option>
+            <option value="px">Pixels (px)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <button type="submit" class="convert-btn" id="convertBtn">Convert to PDF</button>
+  </form>
+
+  <div class="status" id="status">
+    <div class="spinner" id="spinner"></div>
+    <span id="statusMsg"></span>
+  </div>
+</div>
+
+<script>
+  // File drag & drop
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('fileInput');
+  const fileName  = document.getElementById('fileName');
+
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) {
+      fileName.textContent = '✓ ' + fileInput.files[0].name;
+      fileName.style.display = 'block';
+    }
+  });
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    if (e.dataTransfer.files[0]) {
+      fileInput.files = e.dataTransfer.files;
+      fileName.textContent = '✓ ' + e.dataTransfer.files[0].name;
+      fileName.style.display = 'block';
+    }
+  });
+
+  // Preset buttons
+  document.querySelectorAll('.preset-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.getElementById('width').value  = btn.dataset.w;
+      document.getElementById('height').value = btn.dataset.h;
+      document.getElementById('unit').value   = btn.dataset.u;
+    });
+  });
+
+  // Form submit
+  document.getElementById('form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const btn    = document.getElementById('convertBtn');
+    const status = document.getElementById('status');
+    const msg    = document.getElementById('statusMsg');
+    const spinner = document.getElementById('spinner');
+
+    btn.disabled = true;
+    status.className = 'status loading';
+    spinner.style.display = 'block';
+    msg.textContent = 'Converting… this may take a few seconds.';
+
+    const formData = new FormData(document.getElementById('form'));
+
+    try {
+      const res = await fetch('/convert', { method: 'POST', body: formData });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Conversion failed');
+      }
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      const w = document.getElementById('width').value;
+      const h = document.getElementById('height').value;
+      const u = document.getElementById('unit').value;
+      a.href = url; a.download = `poster_${w}x${h}${u}.pdf`; a.click();
+      URL.revokeObjectURL(url);
+
+      status.className = 'status success';
+      spinner.style.display = 'none';
+      msg.textContent = `✓ Downloaded poster_${w}x${h}${u}.pdf`;
+    } catch (err) {
+      status.className = 'status error';
+      spinner.style.display = 'none';
+      msg.textContent = '✗ ' + err.message;
+    } finally {
+      btn.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
